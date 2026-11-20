@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const emailSchema = z
-  .string({ required_error: "El email es obligatorio" })
+  .string({ error: "El email es obligatorio" })
   .trim()
   .toLowerCase()
   .min(1, "El email es obligatorio")
@@ -9,7 +9,7 @@ export const emailSchema = z
   .email("Email no válido");
 
 export const passwordSchema = z
-  .string({ required_error: "La contraseña es obligatoria" })
+  .string({ error: "La contraseña es obligatoria" })
   .min(8, "Mínimo 8 caracteres")
   .max(128, "Máximo 128 caracteres")
   .regex(/[A-Za-z]/, "Debe incluir al menos una letra")
@@ -26,7 +26,7 @@ export const requiredPhoneSchema = phoneSchema.refine((v) => v.replace(/\D/g, ""
 });
 
 export const nameSchema = z
-  .string({ required_error: "El nombre es obligatorio" })
+  .string({ error: "El nombre es obligatorio" })
   .trim()
   .min(2, "El nombre es obligatorio")
   .max(120, "Nombre demasiado largo");

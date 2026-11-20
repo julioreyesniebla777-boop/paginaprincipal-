@@ -8,7 +8,7 @@ export const LOCALES = [
 ] as const;
 
 const intFromForm = (min: number, max: number, label: string) =>
-  z.coerce.number({ invalid_type_error: `${label}: número no válido` }).int(`${label}: debe ser entero`).min(min, `${label}: mínimo ${min}`).max(max, `${label}: máximo ${max}`);
+  z.coerce.number({ error: `${label}: número no válido` }).int(`${label}: debe ser entero`).min(min, `${label}: mínimo ${min}`).max(max, `${label}: máximo ${max}`);
 
 export const businessSchema = z.object({
   name: z.string().trim().min(2, "El nombre es obligatorio").max(120),

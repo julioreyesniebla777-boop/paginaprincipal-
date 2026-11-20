@@ -6,7 +6,7 @@ export const customerDetailsSchema = z.object({
   phone: requiredPhoneSchema,
   email: emailSchema,
   notes: z.string().trim().max(1000, "Máximo 1000 caracteres").optional().transform((v) => v || undefined),
-  acceptPolicies: z.literal(true, { errorMap: () => ({ message: "Debes aceptar las políticas para continuar" }) }),
+  acceptPolicies: z.literal(true, { error: "Debes aceptar las políticas para continuar" }),
 });
 
 export const bookingSchema = customerDetailsSchema.extend({
