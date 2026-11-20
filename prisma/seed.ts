@@ -169,6 +169,12 @@ async function main() {
     );
   }
 
+  // Un duplicado intencional (mismo teléfono que el cliente 2) para probar la fusión.
+  const dupOf = customers[1]!;
+  await prisma.customer.create({
+    data: { name: dupOf.name.split(" ")[0] + " (duplicado)", email: null, phone: dupOf.phone, phoneNormalized: dupOf.phoneNormalized, internalNotes: "Creado por teléfono" },
+  });
+
   console.log("Citas…");
   const statuses: AppointmentStatus[] = ["CONFIRMED", "CONFIRMED", "CONFIRMED", "PENDING"];
   let count = 0;
