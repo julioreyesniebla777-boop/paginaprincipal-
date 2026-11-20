@@ -21,6 +21,8 @@ export interface LoadOptions {
   /** Cita que se está reprogramando: no cuenta como ocupada. */
   excludeAppointmentId?: string;
   ignoreBookingWindow?: boolean;
+  /** Para reprogramar citas de un servicio que se desactivó después. */
+  includeInactiveService?: boolean;
   db?: Db;
   now?: Date;
 }
@@ -32,7 +34,7 @@ export async function loadAvailabilityInput(opts: LoadOptions): Promise<ComputeS
   const zone = business.timezone;
 
   const service = await db.service.findFirst({
-    where: { id: opts.serviceId, isActive: true },
+    where: { id: opts.serviceId, ...(opts.includeInactiveService ? {} : { isActive: true }) },
     include: {
       employees: {
         where: { employee: { isActive: true }, ...(opts.employeeId ? { employeeId: opts.employeeId } : {}) },

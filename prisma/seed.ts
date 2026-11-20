@@ -3,7 +3,7 @@ import { PrismaClient, type AppointmentStatus, type TemplateType } from "@prisma
 import bcrypt from "bcryptjs";
 import { DateTime } from "luxon";
 import { DEFAULT_TEMPLATES } from "../src/server/notifications/default-templates";
-import { generateToken, hashToken } from "../src/lib/tokens";
+import { manageTokenHashFor, newAppointmentId } from "../src/lib/manage-token";
 
 const prisma = new PrismaClient();
 const TZ = "America/New_York";
@@ -194,8 +194,10 @@ async function main() {
             const endsAt = startsAt.plus({ minutes: svc.durationMin });
             const past = endsAt < DateTime.now();
             const status: AppointmentStatus = past ? pick<AppointmentStatus>(["COMPLETED", "COMPLETED", "COMPLETED", "COMPLETED", "NO_SHOW", "CANCELLED"]) : pick(statuses);
+            const id = newAppointmentId();
             await prisma.appointment.create({
               data: {
+                id,
                 serviceId: svc.id,
                 employeeId: emp.id,
                 customerId: pick(customers).id,
@@ -206,7 +208,7 @@ async function main() {
                 status,
                 source: rand() < 0.7 ? "ONLINE" : "PANEL",
                 priceCents: svc.priceCents,
-                manageTokenHash: hashToken(generateToken()),
+                manageTokenHash: manageTokenHashFor(id),
                 cancelledAt: status === "CANCELLED" ? startsAt.minus({ days: 1 }).toJSDate() : null,
                 history: { create: { action: "CREATED", toStatus: status, actorType: "SYSTEM", note: "Seed" } },
               },
@@ -227,8 +229,10 @@ async function main() {
     const startsAt = day.set({ hour: 10, minute: 0 });
     const attendees = customers.slice(0, 4 + Math.floor(rand() * 3));
     for (const c of attendees) {
+      const id = newAppointmentId();
       await prisma.appointment.create({
         data: {
+          id,
           serviceId: yoga.id,
           employeeId: sofia.id,
           customerId: c.id,
@@ -238,7 +242,7 @@ async function main() {
           occupiedEnd: startsAt.plus({ minutes: 60 }).toJSDate(),
           status: "CONFIRMED",
           priceCents: yoga.priceCents,
-          manageTokenHash: hashToken(generateToken()),
+          manageTokenHash: manageTokenHashFor(id),
           history: { create: { action: "CREATED", toStatus: "CONFIRMED", actorType: "SYSTEM", note: "Seed" } },
         },
       });
