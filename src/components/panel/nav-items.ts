@@ -12,5 +12,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/panel/servicios", label: "Servicios", icon: "✂️", roles: ["ADMIN"] },
   { href: "/panel/empleados", label: "Profesionales", icon: "👥", roles: ["ADMIN"] },
   { href: "/panel/disponibilidad", label: "Disponibilidad", icon: "📆", roles: ["ADMIN"] },
+  { href: "/panel/notificaciones", label: "Notificaciones", icon: "✉️", roles: ["ADMIN"] },
   { href: "/panel/configuracion", label: "Configuración", icon: "⚙️", roles: ["ADMIN"] },
 ];

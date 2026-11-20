@@ -39,6 +39,7 @@ export function renderTemplate(tpl: string, vars: TemplateVars, opts: { html: bo
 export function htmlToText(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/t[dh]>/gi, " ")
     .replace(/<\/(p|div|h[1-6]|li|tr)>/gi, "\n")
     .replace(/<a [^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/gi, "$2 ($1)")
     .replace(/<[^>]+>/g, "")
