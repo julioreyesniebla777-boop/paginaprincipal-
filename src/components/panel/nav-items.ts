@@ -9,6 +9,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/panel/citas", label: "Citas", icon: "📋", roles: ["ADMIN", "EMPLOYEE"] },
   { href: "__MY_SCHEDULE__", label: "Mi horario", icon: "🕘", roles: ["EMPLOYEE"] },
   { href: "/panel/clientes", label: "Clientes", icon: "🧑‍🤝‍🧑", roles: ["ADMIN"] },
+  { href: "/panel/reportes", label: "Reportes", icon: "📊", roles: ["ADMIN"] },
   { href: "/panel/servicios", label: "Servicios", icon: "✂️", roles: ["ADMIN"] },
   { href: "/panel/empleados", label: "Profesionales", icon: "👥", roles: ["ADMIN"] },
   { href: "/panel/disponibilidad", label: "Disponibilidad", icon: "📆", roles: ["ADMIN"] },
