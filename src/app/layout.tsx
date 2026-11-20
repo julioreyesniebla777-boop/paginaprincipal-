@@ -19,8 +19,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const b = await getBusiness();
   const style = { "--brand": b.primaryColor, "--brand-dark": b.secondaryColor } as React.CSSProperties;
   return (
-    <html lang={b.locale || "es"}>
-      <body style={style} className="min-h-dvh antialiased">
+    <html lang={b.locale || "es"} style={style}>
+      <body className="min-h-dvh antialiased">
         {children}
       </body>
     </html>

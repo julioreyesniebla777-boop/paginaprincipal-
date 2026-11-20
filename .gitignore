@@ -5,7 +5,7 @@ out
 .env.local
 *.tsbuildinfo
 next-env.d.ts
-public/uploads/*
-!public/uploads/.gitkeep
+uploads/*
+!uploads/.gitkeep
 coverage
 .DS_Store

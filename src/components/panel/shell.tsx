@@ -14,13 +14,15 @@ export function PanelShell({
   children,
 }: {
   businessName: string;
-  user: { name: string; role: Role };
+  user: { name: string; role: Role; employeeId: string | null };
   logout: () => Promise<void>;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const items = NAV_ITEMS.filter((i) => i.roles.includes(user.role));
+  const items = NAV_ITEMS.filter((i) => i.roles.includes(user.role))
+    .filter((i) => i.href !== "__MY_SCHEDULE__" || user.employeeId)
+    .map((i) => (i.href === "__MY_SCHEDULE__" ? { ...i, href: `/panel/empleados/${user.employeeId}/horario` } : i));
   const isActive = (href: string) => (href === "/panel" ? pathname === "/panel" : pathname.startsWith(href));
 
   const nav = (
