@@ -1,0 +1,357 @@
+// Esquema de la aplicación de gestión de clientes y citas.
+// Todas las columnas DateTime se guardan en UTC. Las fechas "locales"
+// (excepciones de horario, cumpleaños) usan @db.Date y se interpretan
+// en la zona horaria del negocio.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────── Enums ─────────────
+enum Role {
+  ADMIN
+  EMPLOYEE
+  CUSTOMER
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum AppointmentSource {
+  ONLINE
+  PANEL
+}
+
+enum ExceptionType {
+  DAY_OFF
+  VACATION
+  HOLIDAY
+  CUSTOM_HOURS
+}
+
+enum HistoryAction {
+  CREATED
+  STATUS_CHANGED
+  RESCHEDULED
+  UPDATED
+  CANCELLED
+}
+
+enum ActorType {
+  ADMIN
+  EMPLOYEE
+  CUSTOMER
+  GUEST
+  SYSTEM
+}
+
+enum TemplateType {
+  BOOKING_CONFIRMATION
+  BOOKING_PENDING
+  REMINDER
+  RESCHEDULED
+  CANCELLED
+  BUSINESS_NEW_BOOKING
+  PASSWORD_RESET
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum NotificationStatus {
+  SENT
+  FAILED
+  SKIPPED
+}
+
+// ───────────── Negocio ─────────────
+model Business {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  logoUrl             String?
+  primaryColor        String   @default("#2563eb")
+  secondaryColor      String   @default("#0f172a")
+  address             String?
+  phone               String?
+  email               String?
+  timezone            String   @default("America/New_York")
+  locale              String   @default("es")
+  currency            String   @default("USD")
+  slotIntervalMin     Int      @default(30)
+  minNoticeMin        Int      @default(120)
+  maxDaysAhead        Int      @default(60)
+  cancelLimitMin      Int      @default(1440)
+  autoConfirm         Boolean  @default(true)
+  reminderHoursBefore Int      @default(24)
+  policyText          String?  @db.Text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ───────────── Usuarios y auth ─────────────
+model User {
+  id           String               @id @default(cuid())
+  email        String               @unique
+  name         String
+  passwordHash String
+  role         Role                 @default(CUSTOMER)
+  isActive     Boolean              @default(true)
+  lastLoginAt  DateTime?
+  employee     Employee?
+  customer     Customer?
+  resetTokens  PasswordResetToken[]
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model RateLimit {
+  key     String   @id @db.VarChar(191)
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}
+
+// ───────────── Empleados ─────────────
+model Employee {
+  id           String              @id @default(cuid())
+  userId       String?             @unique
+  displayName  String
+  email        String?
+  phone        String?
+  bio          String?             @db.Text
+  color        String              @default("#10b981")
+  isActive     Boolean             @default(true)
+  sortOrder    Int                 @default(0)
+  user         User?               @relation(fields: [userId], references: [id], onDelete: SetNull)
+  services     ServiceEmployee[]
+  schedules    WeeklySchedule[]
+  exceptions   ScheduleException[]
+  timeBlocks   TimeBlock[]
+  appointments Appointment[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+// ───────────── Servicios ─────────────
+model ServiceCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  sortOrder Int       @default(0)
+  services  Service[]
+}
+
+model Service {
+  id              String            @id @default(cuid())
+  categoryId      String?
+  name            String
+  description     String?           @db.Text
+  durationMin     Int
+  priceCents      Int               @default(0)
+  color           String            @default("#6366f1")
+  bufferBeforeMin Int               @default(0)
+  bufferAfterMin  Int               @default(0)
+  capacity        Int               @default(1)
+  isActive        Boolean           @default(true)
+  sortOrder       Int               @default(0)
+  category        ServiceCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  employees       ServiceEmployee[]
+  appointments    Appointment[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([isActive])
+}
+
+model ServiceEmployee {
+  serviceId  String
+  employeeId String
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([serviceId, employeeId])
+}
+
+// ───────────── Disponibilidad ─────────────
+// Horario semanal: varios bloques por día, en minutos desde medianoche (hora local del negocio).
+model WeeklySchedule {
+  id         String   @id @default(cuid())
+  employeeId String
+  weekday    Int // 1 = lunes … 7 = domingo (ISO)
+  startMin   Int
+  endMin     Int
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, weekday])
+}
+
+// Excepciones por fecha local. employeeId null = aplica a todo el negocio.
+// CUSTOM_HOURS: una fila por bloque; reemplaza el horario semanal de ese día.
+model ScheduleException {
+  id         String        @id @default(cuid())
+  employeeId String?
+  type       ExceptionType
+  startDate  DateTime      @db.Date
+  endDate    DateTime      @db.Date
+  startMin   Int?
+  endMin     Int?
+  label      String?
+  employee   Employee?     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt  DateTime      @default(now())
+
+  @@index([employeeId, startDate, endDate])
+}
+
+// Bloqueos manuales de tiempo (UTC).
+model TimeBlock {
+  id          String   @id @default(cuid())
+  employeeId  String
+  startsAt    DateTime
+  endsAt      DateTime
+  reason      String?
+  createdById String?
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([employeeId, startsAt, endsAt])
+}
+
+// ───────────── Clientes (CRM) ─────────────
+model Customer {
+  id              String        @id @default(cuid())
+  userId          String?       @unique
+  name            String
+  email           String?
+  phone           String?
+  phoneNormalized String?
+  birthDate       DateTime?     @db.Date
+  internalNotes   String?       @db.Text
+  isBlocked       Boolean       @default(false)
+  blockedReason   String?
+  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tags            CustomerTag[]
+  appointments    Appointment[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([email])
+  @@index([phoneNormalized])
+  @@index([name])
+}
+
+model Tag {
+  id        String        @id @default(cuid())
+  name      String        @unique
+  color     String        @default("#64748b")
+  customers CustomerTag[]
+}
+
+model CustomerTag {
+  customerId String
+  tagId      String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, tagId])
+}
+
+// ───────────── Citas ─────────────
+model Appointment {
+  id              String               @id @default(cuid())
+  serviceId       String
+  employeeId      String
+  customerId      String
+  startsAt        DateTime
+  endsAt          DateTime
+  occupiedStart   DateTime // startsAt - bufferBefore
+  occupiedEnd     DateTime // endsAt + bufferAfter
+  status          AppointmentStatus    @default(PENDING)
+  source          AppointmentSource    @default(ONLINE)
+  priceCents      Int
+  customerNotes   String?              @db.Text
+  internalNotes   String?              @db.Text
+  manageTokenHash String               @unique
+  reminderSentAt  DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  service         Service              @relation(fields: [serviceId], references: [id])
+  employee        Employee             @relation(fields: [employeeId], references: [id])
+  customer        Customer             @relation(fields: [customerId], references: [id])
+  history         AppointmentHistory[]
+  notifications   NotificationLog[]
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  @@index([employeeId, occupiedStart, occupiedEnd])
+  @@index([startsAt])
+  @@index([status, startsAt])
+  @@index([customerId])
+}
+
+model AppointmentHistory {
+  id            String             @id @default(cuid())
+  appointmentId String
+  action        HistoryAction
+  fromStatus    AppointmentStatus?
+  toStatus      AppointmentStatus?
+  fromStartsAt  DateTime?
+  toStartsAt    DateTime?
+  actorType     ActorType
+  actorUserId   String?
+  note          String?            @db.Text
+  appointment   Appointment        @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  createdAt     DateTime           @default(now())
+
+  @@index([appointmentId, createdAt])
+}
+
+// ───────────── Notificaciones ─────────────
+model EmailTemplate {
+  id        String       @id @default(cuid())
+  type      TemplateType @unique
+  subject   String
+  bodyHtml  String       @db.Text
+  enabled   Boolean      @default(true)
+  updatedAt DateTime     @updatedAt
+}
+
+model NotificationLog {
+  id            String              @id @default(cuid())
+  appointmentId String?
+  channel       NotificationChannel @default(EMAIL)
+  templateType  TemplateType
+  recipient     String
+  status        NotificationStatus
+  error         String?             @db.Text
+  appointment   Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  createdAt     DateTime            @default(now())
+
+  @@index([appointmentId])
+  @@index([createdAt])
+}
