@@ -122,3 +122,16 @@ export async function deleteTimeBlockAction(fd: FormData): Promise<void> {
   revalidatePath("/panel/calendario");
 }
 
+
+/** Elimina un bloqueo desde el calendario. */
+export async function deleteTimeBlockById(id: string): Promise<ActionState> {
+  return guarded(async () => {
+    const user = await assertStaff();
+    const block = await prisma.timeBlock.findUnique({ where: { id: String(id) } });
+    if (!block) throw new UserError("Bloqueo no encontrado");
+    if (!canManageEmployee(user, block.employeeId)) throw new ForbiddenError();
+    await prisma.timeBlock.delete({ where: { id: block.id } });
+    revalidatePath(`/panel/empleados/${block.employeeId}/horario`);
+    return { ok: true };
+  });
+}

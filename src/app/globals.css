@@ -21,3 +21,49 @@ body {
     cursor: pointer;
   }
 }
+
+/* ── FullCalendar ── */
+.panel-calendar .fc {
+  --fc-border-color: #e4e4e7;
+  --fc-today-bg-color: color-mix(in srgb, var(--color-brand) 6%, transparent);
+  --fc-button-bg-color: #ffffff;
+  --fc-button-border-color: #d4d4d8;
+  --fc-button-text-color: #27272a;
+  --fc-button-hover-bg-color: #f4f4f5;
+  --fc-button-hover-border-color: #d4d4d8;
+  --fc-button-active-bg-color: var(--color-brand);
+  --fc-button-active-border-color: var(--color-brand);
+  --fc-event-border-color: transparent;
+  font-size: 0.85rem;
+}
+.panel-calendar .fc .fc-button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  text-transform: none;
+  box-shadow: none !important;
+}
+.panel-calendar .fc .fc-button-active {
+  color: #fff !important;
+}
+.panel-calendar .fc .fc-toolbar-title {
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.panel-calendar .fc .fc-timegrid-event {
+  border-left-width: 4px;
+  border-radius: 6px;
+}
+.panel-calendar .fc .status-pending {
+  background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.18) 0 6px, transparent 6px 12px);
+}
+.panel-calendar .fc .status-cancelled .fc-event-title,
+.panel-calendar .fc .status-no_show .fc-event-title {
+  text-decoration: line-through;
+}
+@media (max-width: 767px) {
+  .panel-calendar .fc .fc-toolbar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

@@ -243,3 +243,60 @@ export async function findByManageToken(tokenHash: string) {
     include: { service: true, employee: true, customer: true },
   });
 }
+
+/** Transiciones de estado permitidas desde el panel. */
+export const STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
+  PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["COMPLETED", "NO_SHOW", "CANCELLED", "PENDING"],
+  COMPLETED: ["CONFIRMED", "NO_SHOW"],
+  NO_SHOW: ["COMPLETED", "CONFIRMED"],
+  CANCELLED: ["CONFIRMED", "PENDING"],
+};
+
+export async function changeStatus(opts: { appointmentId: string; status: AppointmentStatus; actor: Actor; note?: string }) {
+  return prisma.$transaction(async (tx) => {
+    const appt = await tx.appointment.findUnique({ where: { id: opts.appointmentId }, include: { service: true } });
+    if (!appt) throw new BookingError("Cita no encontrada", "NOT_FOUND");
+    if (appt.status === opts.status) return appt;
+    if (!STATUS_TRANSITIONS[appt.status].includes(opts.status)) {
+      throw new BookingError("Cambio de estado no permitido", "INVALID");
+    }
+    // Reactivar una cita cancelada: la franja debe seguir libre.
+    if (appt.status === "CANCELLED") {
+      await lockEmployees(tx, [appt.employeeId]);
+      const business = await getBusiness();
+      const date = DateTime.fromJSDate(appt.startsAt, { zone: business.timezone }).toISODate()!;
+      const avail = await loadAvailabilityInput({
+        serviceId: appt.serviceId,
+        employeeId: appt.employeeId,
+        from: date,
+        to: date,
+        db: tx,
+        excludeAppointmentId: appt.id,
+        ignoreBookingWindow: true,
+        includeInactiveService: true,
+      });
+      if (!avail || !isSlotAvailable(avail, appt.employeeId, appt.startsAt)) {
+        throw new BookingError("La franja ya está ocupada; reprograma la cita en lugar de reactivarla.", "SLOT_TAKEN");
+      }
+    }
+    return tx.appointment.update({
+      where: { id: appt.id },
+      data: {
+        status: opts.status,
+        ...(opts.status === "CANCELLED" ? { cancelledAt: new Date(), cancelReason: opts.note ?? null } : {}),
+        ...(appt.status === "CANCELLED" ? { cancelledAt: null, cancelReason: null } : {}),
+        history: {
+          create: {
+            action: opts.status === "CANCELLED" ? "CANCELLED" : "STATUS_CHANGED",
+            fromStatus: appt.status,
+            toStatus: opts.status,
+            actorType: opts.actor.type,
+            actorUserId: opts.actor.userId ?? null,
+            note: opts.note ?? null,
+          },
+        },
+      },
+    });
+  });
+}
