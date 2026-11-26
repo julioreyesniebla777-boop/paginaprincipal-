@@ -17,7 +17,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
-    "build:deploy": "prisma generate && prisma migrate deploy && next build",
+    "build:deploy": "prisma generate && prisma migrate deploy && tsx scripts/setup-production.ts --si-hay-datos && next build",
     "setup:prod": "tsx scripts/setup-production.ts",
     "cron:reminders": "curl -fsS -H \"Authorization: Bearer $CRON_SECRET\" \"$APP_URL/api/cron/reminders\""
   },

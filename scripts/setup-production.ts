@@ -18,7 +18,14 @@ async function main() {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;
   const name = process.env.ADMIN_NAME?.trim() || "Administrador";
-  if (!email || !password) throw new Error("Define ADMIN_EMAIL y ADMIN_PASSWORD");
+  if (!email || !password) {
+    // En la publicación automática (build:deploy) solo se ejecuta si se definieron los datos.
+    if (process.argv.includes("--si-hay-datos")) {
+      console.log("· Sin ADMIN_EMAIL/ADMIN_PASSWORD: no se crea ni cambia ningún administrador");
+      return;
+    }
+    throw new Error("Define ADMIN_EMAIL y ADMIN_PASSWORD");
+  }
   if (password.length < 10 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
     throw new Error("ADMIN_PASSWORD debe tener al menos 10 caracteres, con letras y números");
   }
