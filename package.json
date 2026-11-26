@@ -64,6 +64,8 @@
     "postcss": "$postcss",
     "next-auth": {
       "nodemailer": "$nodemailer"
-    }
+    },
+    "effect": "^3.22.5",
+    "deepmerge-ts": "^8.0.2"
   }
 }

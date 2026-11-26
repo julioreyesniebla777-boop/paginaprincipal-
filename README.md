@@ -244,6 +244,7 @@ src/lib/                   validación Zod compartida, CSV, .ics, formato y toke
 - Subida de logos limitada a PNG, JPG o WebP de máximo 1 MB, con verificación de la firma del archivo y servida con `nosniff`.
 - CSV exportados protegidos contra inyección de fórmulas.
 - Cabeceras: `X-Frame-Options: SAMEORIGIN` en todo excepto `/embed/*`, `nosniff`, `Referrer-Policy` y `Permissions-Policy`.
+- Dependencias: `package.json` › `overrides` obliga a usar `effect` ≥ 3.22.5 y `deepmerge-ts` ≥ 8.0.2 (piezas internas de Prisma con avisos de seguridad). Prisma 6.19 y 7.10 todavía traen las versiones viejas; cuando Prisma las actualice, se pueden quitar esas dos líneas. Revisa con `npm audit --omit=dev`.
 
 ### Dependencias y auditoría
 
